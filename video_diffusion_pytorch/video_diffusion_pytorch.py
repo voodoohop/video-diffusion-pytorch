@@ -687,7 +687,7 @@ class Dataset(data.Dataset):
         self.image_size = image_size
         self.channels = channels
         paths = [p for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
-        paths = paths * 20
+        #paths = paths * 20
         self.transform = T.Compose([
             T.Resize(image_size),
             T.RandomHorizontalFlip() if horizontal_flip else T.Lambda(identity),
