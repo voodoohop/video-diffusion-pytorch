@@ -654,14 +654,10 @@ def video_tensor_to_gif(tensor, path, duration = 80, loop = 0, optimize = True):
 
 # gif -> (channels, frame, height, width) tensor
 
-def gif_to_tensors(path, channels = 3, transform = T.ToTensor()):
+def gif_to_tensor(path, channels = 3, transform = T.ToTensor()):
     img = Image.open(path)
     tensors = tuple(map(transform, seek_all_images(img, channels = channels)))
-
-    split = torch.split(torch.stack(tensors, dim = 1), 10, dim = 1)
-    split = split[0:len(split)-1]
-    
-    return torch.stack(split)
+    return torch.stack(tensors, dim = 1)
 
 def identity(t):
     return t
@@ -671,6 +667,9 @@ def normalize_img(t):
 
 def unnormalize_img(t):
     return (t + 1) * 0.5
+
+import random
+
 
 class Dataset(data.Dataset):
     def __init__(
@@ -686,8 +685,8 @@ class Dataset(data.Dataset):
         self.folder = folder
         self.image_size = image_size
         self.channels = channels
-        paths = [p for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
-        #paths = paths * 20
+        self.paths = [p for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
+
         self.transform = T.Compose([
             T.Resize(image_size),
             T.RandomHorizontalFlip() if horizontal_flip else T.Lambda(identity),
@@ -695,18 +694,18 @@ class Dataset(data.Dataset):
             T.ToTensor(),
             T.Lambda(normalize_img)
         ])
-        gifs = [gif_to_tensors(p, self.channels, transform = self.transform) for p in paths]
-        
-
-        self.images = torch.stack(gifs)
-        print("shape", self.images.shape)
+        self.num_frames = num_frames
 
     def __len__(self):
-        return len(self.images)
+        return len(self.paths)
 
     def __getitem__(self, index):
-        image = self.images[index]
-        return image
+        path = self.paths[index]
+        tensor = gif_to_tensor(path, self.channels, transform = self.transform)
+        print(tensor.shape)
+        # return a random chunk of num_frames from tensor dimension 0
+        offset = random.randint(0, tensor.shape[1] - self.num_frames)
+        return tensor[:, offset : offset + self.num_frames]
 
 # trainer class
 
@@ -843,7 +842,8 @@ class Trainer(object):
                 log = {**log, 'sample': wandb.Video(video_path)}
                 self.save(milestone)
 
-            wandb.log(log)
+            #wandb.log(log)
             self.step += 1
 
         print('training completed')
+  
