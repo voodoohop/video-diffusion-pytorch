@@ -697,11 +697,8 @@ class Dataset(data.Dataset):
         ])
         gifs = [gif_to_tensors(p, self.channels, transform = self.transform) for p in paths]
         
-        newgifs = []
-        for gif in gifs:
-            newgifs = newgifs + gif.tolist()
 
-        self.images = newgifs
+        self.images = torch.stack(gifs)
 
     def __len__(self):
         return len(self.images)
