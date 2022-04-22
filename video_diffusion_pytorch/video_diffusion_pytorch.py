@@ -699,6 +699,7 @@ class Dataset(data.Dataset):
         
 
         self.images = torch.stack(gifs)
+        print("shape", self.images.shape)
 
     def __len__(self):
         return len(self.images)
