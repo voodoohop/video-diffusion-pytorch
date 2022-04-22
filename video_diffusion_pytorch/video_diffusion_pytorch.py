@@ -1,23 +1,23 @@
-import math
 import copy
-import torch
-from torch import nn, einsum
-import torch.nn.functional as F
-from inspect import isfunction
+import math
 from functools import partial
-
-from torch.utils import data
+from inspect import isfunction
 from pathlib import Path
-from torch.optim import Adam
-from torchvision import transforms as T, utils
-from torch.cuda.amp import autocast, GradScaler
-from PIL import Image
 
-from tqdm import tqdm
+import torch
+import torch.nn.functional as F
 from einops import rearrange
 from einops_exts import check_shape, rearrange_many
+from PIL import Image
+from torch import einsum, nn
+from torch.cuda.amp import GradScaler, autocast
+from torch.optim import Adam
+from torch.utils import data
+from torchvision import transforms as T
+from torchvision import utils
+from tqdm import tqdm
 
-from video_diffusion_pytorch.text import tokenize, bert_embed, BERT_MODEL_DIM
+from video_diffusion_pytorch.text import BERT_MODEL_DIM, bert_embed, tokenize
 
 # helpers functions
 
@@ -654,10 +654,14 @@ def video_tensor_to_gif(tensor, path, duration = 80, loop = 0, optimize = True):
 
 # gif -> (channels, frame, height, width) tensor
 
-def gif_to_tensor(path, channels = 3, transform = T.ToTensor()):
+def gif_to_tensors(path, channels = 3, transform = T.ToTensor()):
     img = Image.open(path)
     tensors = tuple(map(transform, seek_all_images(img, channels = channels)))
-    return torch.stack(tensors, dim = 1)
+
+    split = torch.split(torch.stack(tensors, dim = 1), 10, dim = 1)
+    split = split[0:len(split)-1]
+    
+    return torch.stack(split)
 
 def identity(t):
     return t
@@ -682,8 +686,8 @@ class Dataset(data.Dataset):
         self.folder = folder
         self.image_size = image_size
         self.channels = channels
-        self.paths = [p for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
-
+        paths = [p for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
+        paths = paths * 20
         self.transform = T.Compose([
             T.Resize(image_size),
             T.RandomHorizontalFlip() if horizontal_flip else T.Lambda(identity),
@@ -691,17 +695,26 @@ class Dataset(data.Dataset):
             T.ToTensor(),
             T.Lambda(normalize_img)
         ])
+        gifs = [gif_to_tensors(p, self.channels, transform = self.transform) for p in paths]
+        
+        newgifs = []
+        for gif in gifs:
+            newgifs = newgifs + gif
+
+        self.images = newgifs
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.images)
 
     def __getitem__(self, index):
-        path = self.paths[index]
-        return gif_to_tensor(path, self.channels, transform = self.transform)
+        image = self.images[index]
+        return image
 
 # trainer class
 
 import wandb
+
+
 class Trainer(object):
     def __init__(
         self,
