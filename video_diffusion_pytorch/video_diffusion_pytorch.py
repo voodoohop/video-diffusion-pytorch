@@ -699,7 +699,7 @@ class Dataset(data.Dataset):
         
         newgifs = []
         for gif in gifs:
-            newgifs = newgifs + gif
+            newgifs = newgifs + gif.tolist()
 
         self.images = newgifs
 
