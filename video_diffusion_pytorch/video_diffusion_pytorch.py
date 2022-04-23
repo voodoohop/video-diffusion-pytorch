@@ -702,7 +702,7 @@ class Dataset(data.Dataset):
     def __getitem__(self, index):
         img = self.images[index]
 
-        print(tensor.shape)
+        #print(tensor.shape)
         # return a random chunk of num_frames from tensor dimension 0
         offset = random.randint(0, tensor.shape[1] - self.num_frames)
         return tensor[:, offset : offset + self.num_frames]
