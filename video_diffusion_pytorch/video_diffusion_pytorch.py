@@ -296,7 +296,7 @@ class Unet3D(nn.Module):
         dim_mults=(1, 2, 4, 8),
         channels = 3,
         attn_heads = 8,
-        use_bert_text_cond = False
+        use_bert_text_cond = True
     ):
         super().__init__()
         self.channels = channels
