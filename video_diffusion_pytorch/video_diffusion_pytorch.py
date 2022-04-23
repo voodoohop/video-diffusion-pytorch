@@ -654,8 +654,8 @@ def video_tensor_to_gif(tensor, path, duration = 80, loop = 0, optimize = True):
 
 # gif -> (channels, frame, height, width) tensor
 
-def gif_to_tensor(path, channels = 3, transform = T.ToTensor()):
-    img = Image.open(path)
+def gif_to_tensor(img, channels = 3, transform = T.ToTensor()):
+
     tensors = tuple(map(transform, seek_all_images(img, channels = channels)))
     return torch.stack(tensors, dim = 1)
 
@@ -685,7 +685,7 @@ class Dataset(data.Dataset):
         self.folder = folder
         self.image_size = image_size
         self.channels = channels
-        self.paths = [p for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
+        self.images = [Image.open(p) for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
 
         self.transform = T.Compose([
             T.Resize(image_size),
@@ -697,11 +697,11 @@ class Dataset(data.Dataset):
         self.num_frames = num_frames
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.images)
 
     def __getitem__(self, index):
-        path = self.paths[index]
-        tensor = gif_to_tensor(path, self.channels, transform = self.transform)
+        img = self.images[index]
+        tensor = gif_to_tensor(img, self.channels, transform = self.transform)
         print(tensor.shape)
         # return a random chunk of num_frames from tensor dimension 0
         offset = random.randint(0, tensor.shape[1] - self.num_frames)
