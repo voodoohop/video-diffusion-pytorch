@@ -686,7 +686,6 @@ class Dataset(data.Dataset):
         self.image_size = image_size
         self.channels = channels
         self.images = [Image.open(p) for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
-        self.images = [gif_to_tensor(img, self.channels, transform = self.transform) for img in self.images]
         self.transform = T.Compose([
             T.Resize(image_size),
             T.RandomHorizontalFlip() if horizontal_flip else T.Lambda(identity),
@@ -694,6 +693,7 @@ class Dataset(data.Dataset):
             T.ToTensor(),
             T.Lambda(normalize_img)
         ])
+        self.images = [gif_to_tensor(img, self.channels, transform = self.transform) for img in self.images]
         self.num_frames = num_frames
 
     def __len__(self):
