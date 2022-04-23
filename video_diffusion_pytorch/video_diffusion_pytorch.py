@@ -700,7 +700,7 @@ class Dataset(data.Dataset):
         return len(self.images)
 
     def __getitem__(self, index):
-        img = self.images[index]
+        tensor = self.images[index]
 
         #print(tensor.shape)
         # return a random chunk of num_frames from tensor dimension 0
