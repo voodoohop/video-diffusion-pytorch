@@ -686,7 +686,7 @@ class Dataset(data.Dataset):
         self.image_size = image_size
         self.channels = channels
         self.images = [Image.open(p) for ext in exts for p in Path(f'{folder}').glob(f'**/*.{ext}')]
-
+        self.images = [gif_to_tensor(img, self.channels, transform = self.transform) for img in self.images]
         self.transform = T.Compose([
             T.Resize(image_size),
             T.RandomHorizontalFlip() if horizontal_flip else T.Lambda(identity),
@@ -701,7 +701,7 @@ class Dataset(data.Dataset):
 
     def __getitem__(self, index):
         img = self.images[index]
-        tensor = gif_to_tensor(img, self.channels, transform = self.transform)
+
         print(tensor.shape)
         # return a random chunk of num_frames from tensor dimension 0
         offset = random.randint(0, tensor.shape[1] - self.num_frames)
